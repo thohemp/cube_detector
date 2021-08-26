@@ -7,7 +7,7 @@ from std_msgs.msg import Header
 from std_msgs.msg import String
 from sensor_msgs.msg import CompressedImage
 from sensor_msgs.msg import Image
-from cube_detector.msg import Detections, Detection
+from rosa_msgs.msg import Detections, Detection
 IMAGE_WIDTH=1241
 IMAGE_HEIGHT=376
 from std_msgs.msg import Int8
@@ -132,20 +132,20 @@ def detect(img):
             det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
 
             # Print results
-            for c in det[:, -1].unique():
-                n = (det[:, -1] == c).sum()  # detections per class
+            for c in det[:, -2].unique():
+                n = (det[:, -2] == c).sum()  # detections per class
                 s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
     
 
             # Write results
-            for *xyxy, conf, cls in reversed(det):
+            for *xyxy, conf, cls , angle  in reversed(det):
                 view_img = True
                 if view_img:  # Add bbox to image
                     c = int(cls)  # integer class
                     hide_labels = False
                     hide_conf = False
                     label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                    plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1)
+                    plot_one_box(xyxy, angle, im0, label=label, color=colors(c, True), line_thickness=2)
                     c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
 
                     det_msg = Detection()
@@ -181,6 +181,7 @@ def detect(img):
             cv2.resizeWindow(str(p), 1920, 1080)
             im_out = im0[:,:,[2,1,0]]
             cv2.imshow(str(p), im_out)
+            publish_image(im_out)
             cv2.waitKey(1)  # 1 millisecond
 
 
@@ -190,7 +191,7 @@ def image_callback_1(image):
     ros_image = np.frombuffer(image.data, dtype=np.uint8).reshape(image.height, image.width, -1)
     with torch.no_grad():
         detect(ros_image)
-        
+
 def publish_image(imgdata):
     image_temp=Image()
     header = Header(stamp=rospy.Time.now())
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     device = ''
     device = select_device(device)
     half = device.type != 'cpu'  # half precision only supported on CUDA
-    weights = os.getcwd() + '/src/cube_detector/' + 'yolov5/m640bg.pt'
+    weights = os.getcwd() + '/src/cube_detector/' + 'yolov5/m640_rotated.pt'
     imgsz = 640
     model = attempt_load(weights, map_location=device)  # load FP32 model
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
@@ -230,9 +231,9 @@ if __name__ == '__main__':
     rospy.init_node('cube_detector')
     image_topic_1 = "/usb_cam/image_raw"
     rospy.Subscriber(image_topic_1, Image, image_callback_1, queue_size=1, buff_size=52428800)
-    image_pub = rospy.Publisher('/cube_detector/image', Image, queue_size=1)
+    image_pub = rospy.Publisher('/WS1/image', Image, queue_size=1)
     grab_pub = rospy.Publisher('/WS1/cube_hand', Int8, queue_size=1)
-    detect_pub = rospy.Publisher('/cube_detector/detections', Detections, queue_size=1)
+    detect_pub = rospy.Publisher('/WS1/detections', Detections, queue_size=1)
     #rospy.init_node("yolo_result_out_node", anonymous=True)
     
 
