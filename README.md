@@ -1,3 +1,11 @@
+
+# Run
+
+```sh
+rosrun cube_detector ros_detect.py 
+```
+
+
 # Training
 
 ```sh
