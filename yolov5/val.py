@@ -23,7 +23,7 @@ from models.experimental import attempt_load
 from utils.datasets import create_dataloader
 from utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, check_requirements, \
     box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
-from utils.metrics import ap_per_class, ConfusionMatrix, rotate_box_iou
+from utils.metrics import ap_per_class, ConfusionMatrix
 from utils.plots import plot_images, output_to_target, plot_study_txt
 from utils.torch_utils import select_device, time_sync
 from utils.callbacks import Callbacks
@@ -50,24 +50,50 @@ def save_one_json(predn, jdict, path, class_map):
                       'bbox': [round(x, 3) for x in b],
                       'score': round(p[4], 5)})
 
+def rotate_box_iou(boxes1, boxes2):
+    area1 = boxes1[:, 2] * boxes1[:, 3]
+    area2 = boxes2[:, 2] * boxes2[:, 3]
+    ious = []
+    for i, box1 in enumerate(boxes1):
+        temp_ious = []
+        r1 = ((box1[0], box1[1]), (box1[2], box1[3]), box1[4])
+        for j, box2 in enumerate(boxes2):
+            r2 = ((box2[0], box2[1]), (box2[2], box2[3]), box2[4])
+
+            int_pts = cv2.rotatedRectangleIntersection(r1, r2)[1]
+            if int_pts is not None:
+                order_pts = cv2.convexHull(int_pts, returnPoints=True)
+
+                int_area = cv2.contourArea(order_pts)
+
+                inter = int_area * 1.0 / (area1[i] + area2[j] - int_area)
+                temp_ious.append(inter)
+            else:
+                temp_ious.append(0.0)
+        ious.append(temp_ious)
+    return np.array(ious, dtype=np.float32)
+
 
 def process_batch(detections, labels, iouv):
     """
     Return correct predictions matrix. Both sets of boxes are in (x1, y1, x2, y2) format.
     Arguments:
         detections (Array[N, 7]), x1, y1, x2, y2, conf, class, angle
-        labels (Array[M, 6]), class, x, y, w, h, angle
+        labels (Array[M, 6]), class, x1, y1, x2, y2, angle
     Returns:
         correct (Array[N, 10]), for 10 IoU levels
     """
     correct = torch.zeros(detections.shape[0], iouv.shape[0], dtype=torch.bool, device=iouv.device)
+
     detections[:, :4] = xyxy2xywh(detections[:, :4])
     # labels[:, 1:5] = xyxy2xywh(labels[:, 1:5])
     boxes1 = torch.cat([detections[:, :4], detections[:, 6].view((-1, 1))], 1)
     boxes2 = torch.cat([labels[:, 1:5], labels[:, 5].view((-1, 1))], 1)
     iou = rotate_box_iou(boxes2.cpu().numpy(), boxes1.cpu().numpy())
-    # iou = box_iou(labels[:, 1:5], detections[:, :4])
     iou = torch.from_numpy(iou).to(detections.device)
+    
+    # iou = box_iou(labels[:, 1:5], detections[:, :4])
+  
     x = torch.where((iou >= iouv[0]) & (labels[:, 0:1] == detections[:, 5]))  # IoU above threshold and classes match
     if x[0].shape[0]:
         matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()  # [label, detection, iou]
@@ -176,7 +202,7 @@ def run(data,
 
         # Compute loss
         if compute_loss:
-            loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls, agle
+            loss += compute_loss([x.float() for x in train_out], targets)[1]  # box, obj, cls, angle
 
         # Run NMS
         targets[:, 2:6] *= torch.Tensor([width, height, width, height]).to(device)  # to pixels

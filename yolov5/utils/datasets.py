@@ -572,16 +572,16 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 img = np.flipud(img)
                 if nl:
                     labels[:, 2] = 1 - labels[:, 2]
-                    labels[:, 5] = 180 - labels[:, 5]  # θ changed when Flip up-down.
-                    labels[labels[:, 5] == 180, 5] = 0  
+                    labels[:, 5] = 90 - labels[:, 5]  # θ changed when Flip up-down.
+                    labels[labels[:, 5] == 90, 5] = 0  
 
             # Flip left-right
             if random.random() < hyp['fliplr']:
                 img = np.fliplr(img)
                 if nl:
                     labels[:, 1] = 1 - labels[:, 1]
-                    labels[:, 5] = 180 - labels[:, 5]  # θ changed when Flip left-right.
-                    labels[labels[:, 5] == 180, 5] = 0 
+                    labels[:, 5] = 90 - labels[:, 5]  # θ changed when Flip left-right.
+                    labels[labels[:, 5] == 90, 5] = 0 
 
             # Cutouts
             # labels = cutout(img, labels, p=0.5)

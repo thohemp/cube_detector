@@ -115,8 +115,6 @@ def xyxy2xywh(x):
     y[:, 3] = x[:, 3] - x[:, 1]  # height
     return y
 
-
-
 class ConfusionMatrix:
     # Updated version of https://github.com/kaanakan/object_detection_confusion_matrix
     def __init__(self, nc, conf=0.25, iou_thres=0.45):
@@ -263,30 +261,6 @@ def box_iou(box1, box2):
     # inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
     inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
     return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
-
-# 中心点 矩形的w h, 旋转的theta（角度，不是弧度）
-def rotate_box_iou(boxes1, boxes2):
-    area1 = boxes1[:, 2] * boxes1[:, 3]
-    area2 = boxes2[:, 2] * boxes2[:, 3]
-    ious = []
-    for i, box1 in enumerate(boxes1):
-        temp_ious = []
-        r1 = ((box1[0], box1[1]), (box1[2], box1[3]), box1[4])
-        for j, box2 in enumerate(boxes2):
-            r2 = ((box2[0], box2[1]), (box2[2], box2[3]), box2[4])
-
-            int_pts = cv2.rotatedRectangleIntersection(r1, r2)[1]
-            if int_pts is not None:
-                order_pts = cv2.convexHull(int_pts, returnPoints=True)
-
-                int_area = cv2.contourArea(order_pts)
-
-                inter = int_area * 1.0 / (area1[i] + area2[j] - int_area)
-                temp_ious.append(inter)
-            else:
-                temp_ious.append(0.0)
-        ious.append(temp_ious)
-    return np.array(ious, dtype=np.float32)
 
 
 

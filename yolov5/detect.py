@@ -165,6 +165,8 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
             # Stream results
             if view_img:
+                cv2.namedWindow(str(p), cv2.WINDOW_NORMAL)
+                cv2.resizeWindow(str(p), 1920, 1080)
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
 

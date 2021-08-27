@@ -87,21 +87,8 @@ class QFocalLoss(nn.Module):
             return loss
 
 def gaussian_label(label, num_class, u=0, sig=4.0):
-    '''
-    转换成CSL Labels：
-        用高斯窗口函数根据角度θ的周期性赋予gt labels同样的周期性，使得损失函数在计算边界处时可以做到“差值很大但loss很小”；
-        并且使得其labels具有环形特征，能够反映各个θ之间的角度距离
-    @param label: 当前box的θ类别  shape(1)
-    @param num_class: θ类别数量=180
-    @param u: 高斯函数中的μ
-    @param sig: 高斯函数中的σ
-    @return: 高斯离散数组:将高斯函数的最高值设置在θ所在的位置，例如label为45，则将高斯分布数列向右移动直至x轴为45时，取值为1 shape(180)
-    '''
-    # floor()返回数字的下舍整数   ceil() 函数返回数字的上入整数  range(-90,90)
-    # 以num_class=180为例，生成从-90到89的数字整形list  shape(180)
     x = np.array(range(math.floor(-num_class / 2), math.ceil(num_class / 2), 1))
-    y_sig = np.exp(-(x - u) ** 2 / (2 * sig ** 2))  # shape(180) 为-90到89的经高斯公式计算后的数值
-    # 将高斯函数的最高值设置在θ所在的位置，例如label为45，则将高斯分布数列向右移动直至x轴为45时，取值为1
+    y_sig = np.exp(-(x - u) ** 2 / (2 * sig ** 2)) 
     return np.concatenate([y_sig[math.ceil(num_class / 2) - int(label.item()):],
                            y_sig[:math.ceil(num_class / 2) - int(label.item())]], axis=0)
 
@@ -172,14 +159,11 @@ class ComputeLoss:
                     t[range(n), tcls[i]] = self.cp
                     lcls += self.BCEcls(ps[:, 5:self.class_index], t)  # BCE
 
-                # Θ类别损失
-                ttheta = torch.zeros_like(ps[:, self.class_index:])  # size(num, 180)
+                ttheta = torch.zeros_like(ps[:, self.class_index:])  # size(num, 90)
                 for idx in range(len(ps)):  # idx start from 0 to len(ps)-1
-                    # 3个tensor组成的list (tensor_angle_list[i])  对每个步长网络生成对应的class tensor  tangle[i].shape=(num_i, 1)
-                    theta = tangle[i][idx]  # 取出第i个layer中的第idx个目标的角度数值  例如取值θ=90
-                    # CSL论文中窗口半径为6效果最佳，过小无法学到角度信息，过大则角度预测偏差加大
-                    csl_label = gaussian_label(theta, 180, u=0, sig=6)  # 用长度为1的θ值构建长度为180的csl_label
-                    ttheta[idx] = torch.from_numpy(csl_label)  # 将cls_label放入对应的目标中
+                    theta = tangle[i][idx] 
+                    csl_label = gaussian_label(theta, 90, u=0, sig=6)  
+                    ttheta[idx] = torch.from_numpy(csl_label)  
                 langle += self.BCEangle(ps[:, self.class_index:], ttheta)
 
                 # Append targets to text file

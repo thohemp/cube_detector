@@ -15,6 +15,7 @@ from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from subprocess import check_output
 
+
 import cv2
 import math
 import numpy as np
@@ -512,8 +513,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     Returns:
          list of detections, on (n,6) tensor per image [xyxy, conf, cls]
     """
-
-    nc = prediction.shape[2] - 5 - 180 # number of classes
+    nc = prediction.shape[2] - 5 - 90 # number of classes
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Checks
@@ -538,7 +538,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         # Cat apriori labels if autolabelling
         if labels and len(labels[xi]):
             l = labels[xi]
-            v = torch.zeros((len(l), nc + 5 + 180), device=x.device)
+            v = torch.zeros((len(l), nc + 5 + 90), device=x.device)
             v[:, :4] = l[:, 1:5]  # box
             v[:, 4] = 1.0  # conf
             v[range(len(l)), l[:, 0].long() + 5] = 1.0  # cls
@@ -572,9 +572,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
             inds = conf.view(-1) > conf_thres
             x = torch.cat((box, conf, j.float(), j_angle.float()), 1)[inds]
             xy = xy[inds]
-            wh = wh[inds]           # xy = xy[i]
-           # wh = wh[i]
-
+            wh = wh[inds]          
+            
         # Filter by class
         if classes is not None:
             inds = (x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)
@@ -600,6 +599,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         # Batched NMS
         c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
+        
+        
         boxes_xy = (xy + c).int().cpu().numpy().tolist()
         boxes_wh = wh.int().cpu().numpy().tolist()
         boxes_angle = x[:, 6].int().cpu().numpy().tolist()
@@ -609,10 +610,11 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
         for box_inds, box_xy in enumerate(boxes_xy):
             boxes_for_cv2_nms.append((boxes_xy[box_inds], boxes_wh[box_inds], boxes_angle[box_inds]))
-        # i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
-
         i = cv2.dnn.NMSBoxesRotated(boxes_for_cv2_nms, scores_for_cv2_nms, conf_thres, iou_thres)
-        i = np.squeeze(i, axis=-1)
+        i = np.squeeze(i)
+
+        #i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
+   
         if i.shape[0] > max_det:  # limit detections
             i = i[:max_det]
         if merge and (1 < n < 3E3):  # Merge NMS (boxes merged using weighted mean)
