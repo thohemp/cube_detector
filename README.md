@@ -1,5 +1,5 @@
 
-# Cube Detection + Rotation
+# Cube Detection with Oriented Bounding Boxes
 ![Screenshot](example_video.gif)
 
 # Run inference
