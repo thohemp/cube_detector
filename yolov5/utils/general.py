@@ -611,7 +611,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         for box_inds, box_xy in enumerate(boxes_xy):
             boxes_for_cv2_nms.append((boxes_xy[box_inds], boxes_wh[box_inds], boxes_angle[box_inds]))
         i = cv2.dnn.NMSBoxesRotated(boxes_for_cv2_nms, scores_for_cv2_nms, conf_thres, iou_thres)
-        i = np.squeeze(i)
+        i = np.squeeze(i, axis=-1)
 
         #i = torchvision.ops.nms(boxes, scores, iou_thres)  # NMS
    
