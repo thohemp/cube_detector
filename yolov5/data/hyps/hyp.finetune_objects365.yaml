@@ -10,6 +10,8 @@ cls: 0.299
 cls_pw: 0.825
 obj: 0.632
 obj_pw: 1.0
+angle: 0.266
+angle_pw: 0.333  # angle BCELoss positive_weight
 iou_t: 0.2
 anchor_t: 3.44
 anchors: 3.2
@@ -23,7 +25,7 @@ scale: 0.491
 shear: 0.0
 perspective: 0.0
 flipud: 0.0
-fliplr: 0.5
+fliplr: 0.0
 mosaic: 1.0
 mixup: 0.0
 copy_paste: 0.0
