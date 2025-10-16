@@ -10,7 +10,7 @@ from models.experimental import attempt_load
 from utils.augmentations import letterbox
 from utils.general import check_img_size, non_max_suppression, scale_coords, set_logging
 from utils.torch_utils import select_device
-from utils.plots import plot_one_box
+from utils.plots import plot_one_box, colors
 
 IMAGE_WIDTH, IMAGE_HEIGHT = 1241, 376
 
@@ -24,7 +24,7 @@ class CubeDetectorROS2(Node):
         self.grab_toggle = 0
 
         # load model
-        weights = os.path.join(os.path.dirname(__file__), 'm640rot.pt')
+        weights = os.path.join(os.path.dirname(__file__), '640m_new_classes.pt')
         self.model = attempt_load(weights, map_location=self.device)
         self.imgsz = check_img_size(640, s=self.model.stride.max())
         if self.half: self.model.half()
@@ -94,11 +94,11 @@ class CubeDetectorROS2(Node):
                     det_msg.pose.y = float(cy)
                     det_msg.pose.theta = float(angle)
                     dets.append(det_msg)
-
+                    c = int(cls) 
                     try:
                         plot_one_box([x1, y1, x2, y2], angle, im0,
                                     label=f"{det_msg.letter} {conf:.2f}",
-                                    color=(0, 255, 0), line_thickness=2)
+                                    color=colors(c, True), line_thickness=2)
                     except TypeError:
                         cv2.rectangle(im0, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
